@@ -36,9 +36,20 @@ class GitService(QObject):
         self._run_git(["branch", "--all"], action="branches")
 
     def checkout_branch(self, branch_name: str) -> None:
-        if branch_name.startswith("remotes/"):
-            branch_name = branch_name.replace("remotes/", "", 1)
-        self._run_git(["checkout", branch_name], action="checkout")
+        normalized = branch_name.strip()
+
+        if normalized.startswith("remotes/"):
+            normalized = normalized.replace("remotes/", "", 1)
+
+        if "/" in normalized and not normalized.startswith("HEAD"):
+            remote_name, local_branch = normalized.split("/", 1)
+            self._run_git(
+                ["checkout", "-B", local_branch, "--track", f"{remote_name}/{local_branch}"],
+                action="checkout",
+            )
+            return
+
+        self._run_git(["checkout", normalized], action="checkout")
 
     def _run_git(self, args: list[str], action: str) -> None:
         if self._project_dir is None:
@@ -66,11 +77,17 @@ class GitService(QObject):
             self.output_received.emit(data)
 
     def _on_finished(self, exit_code: int, _status: QProcess.ExitStatus) -> None:
-        if self._pending_action == "branches" and exit_code == 0:
+        action = self._pending_action
+
+        if action == "checkout" and exit_code == 0:
+            self._pending_action = None
+            self.refresh_branches()
+            return
+
+        if action == "branches" and exit_code == 0:
             branches = self._parse_branches(self._stdout_buffer)
             self.branches_received.emit(branches)
-        elif self._pending_action == "checkout" and exit_code == 0:
-            self.refresh_branches()
+
         self._pending_action = None
 
     @staticmethod
