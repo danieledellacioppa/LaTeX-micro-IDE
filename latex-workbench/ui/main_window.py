@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from PySide6.QtCore import QUrl
+from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QFileDialog,
@@ -38,7 +38,7 @@ class MainWindow(QMainWindow):
 
     def _setup_ui(self) -> None:
         splitter = QSplitter()
-        splitter.setOrientation(splitter.Orientation.Vertical)
+        splitter.setOrientation(Qt.Orientation.Vertical)
         splitter.addWidget(self.editor)
         splitter.addWidget(self.log_panel)
         splitter.setSizes([550, 250])
