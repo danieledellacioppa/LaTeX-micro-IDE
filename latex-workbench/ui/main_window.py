@@ -27,6 +27,7 @@ class MainWindow(QMainWindow):
         self.resize(1200, 800)
 
         self.current_file: Path | None = None
+        self._active_build_file: Path | None = None
 
         self.editor = EditorPanel()
         self.log_panel = LogPanel()
@@ -88,33 +89,44 @@ class MainWindow(QMainWindow):
         self.editor.setPlainText(content)
         self.statusBar().showMessage(f"Opened {path}", 5000)
 
-    def save_file(self) -> None:
+    def save_file(self) -> bool:
         if self.current_file is None:
             QMessageBox.warning(self, "No file selected", "Open a .tex file before saving.")
-            return
+            return False
 
         try:
             FileService.write_text(self.current_file, self.editor.toPlainText())
         except Exception as exc:
             QMessageBox.critical(self, "Save failed", f"Could not save file:\n{exc}")
-            return
+            return False
 
         self.statusBar().showMessage(f"Saved {self.current_file}", 5000)
+        return True
 
     def build_file(self) -> None:
         if self.current_file is None:
             QMessageBox.warning(self, "No file selected", "Open a .tex file before building.")
             return
 
-        self.save_file()
+        if not self.save_file():
+            return
+
+        if self.build_service.is_running():
+            self.build_service.build(self.current_file)
+            return
+
+        self._active_build_file = self.current_file
         self.build_service.build(self.current_file)
 
     def _on_build_finished(self, success: bool, message: str) -> None:
         self.log_panel.append_text(f"\n=== {message} ===\n")
-        if not success or self.current_file is None:
+        build_file = self._active_build_file
+        self._active_build_file = None
+
+        if not success or build_file is None:
             return
 
-        pdf_path = self.current_file.with_suffix(".pdf")
+        pdf_path = build_file.with_suffix(".pdf")
         if not pdf_path.exists():
             self.log_panel.append_text(f"Expected PDF not found: {pdf_path}\n")
             return
