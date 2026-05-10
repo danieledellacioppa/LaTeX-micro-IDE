@@ -9,6 +9,7 @@ class GitService(QObject):
     output_received = Signal(str)
     branches_received = Signal(list)
     repo_status_received = Signal(dict)
+    action_finished = Signal(str, int)
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -20,7 +21,6 @@ class GitService(QObject):
         self._process.finished.connect(self._on_finished)
         self._pending_action: str | None = None
         self._stdout_buffer: str = ""
-        self._refresh_status_after_branches = False
 
     def set_project_dir(self, project_dir: Path) -> None:
         self._project_dir = project_dir
@@ -33,6 +33,9 @@ class GitService(QObject):
 
     def run_push(self) -> None:
         self._run_git(["push"], action="push")
+
+    def fetch_prune(self) -> None:
+        self._run_git(["fetch", "--prune"], action="fetch_prune")
 
     def refresh_branches(self) -> None:
         self._run_git(
@@ -61,6 +64,14 @@ class GitService(QObject):
             return
 
         self._run_git(["checkout", normalized], action="checkout")
+
+    def delete_local_branch(self, branch_name: str, force: bool = False) -> None:
+        flag = "-D" if force else "-d"
+        self._run_git(["branch", flag, branch_name.strip()], action="delete_local_force" if force else "delete_local")
+
+    def delete_remote_branch(self, remote_branch_name: str) -> None:
+        short_name = remote_branch_name.replace("origin/", "", 1).strip()
+        self._run_git(["push", "origin", "--delete", short_name], action="delete_remote")
 
     def run_autopush(self, commit_message: str) -> None:
         msg = commit_message.strip()
@@ -110,7 +121,7 @@ class GitService(QObject):
             self._run_git(["push"], action="autopush_push")
             return
 
-        if action in {"autopush_push", "pull", "push", "checkout"} and exit_code == 0:
+        if action in {"autopush_push", "pull", "push", "checkout", "delete_local", "delete_local_force", "delete_remote", "fetch_prune"} and exit_code == 0:
             self.refresh_branches()
             self.refresh_repo_status()
 
@@ -120,8 +131,8 @@ class GitService(QObject):
         if action == "repo_status" and exit_code == 0:
             self.repo_status_received.emit(self._parse_repo_status(self._stdout_buffer))
 
-        if action == "repo_status" and exit_code == 0:
-            self.repo_status_received.emit(self._parse_repo_status(self._stdout_buffer))
+        if action:
+            self.action_finished.emit(action, exit_code)
 
     @staticmethod
     def _parse_branches(branch_output: str) -> list[dict]:
@@ -131,7 +142,9 @@ class GitService(QObject):
             if not line or "->" in line or "|" not in line:
                 continue
             name, date = line.split("|", 1)
-            branches.append({"name": name.strip(), "date": date.strip()})
+            branch_name = name.strip()
+            branch_type = "remote" if branch_name.startswith("origin/") else "local"
+            branches.append({"name": branch_name, "date": date.strip(), "type": branch_type})
         return branches
 
     @staticmethod
