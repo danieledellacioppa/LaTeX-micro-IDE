@@ -1,0 +1,234 @@
+\documentclass[11pt,a4paper,openright,twoside]{book}
+
+\usepackage{fontspec}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{minitoc}
+\usepackage[explicit]{titlesec}
+\usepackage{tikz}
+\usepackage[most]{tcolorbox}
+\usepackage{pagecolor}
+\usepackage{enumitem}
+\usetikzlibrary{calc,positioning,shadows.blur}
+
+\setmainfont{TeX Gyre Pagella}
+\setsansfont{TeX Gyre Heros}
+\setmonofont{JetBrains Mono}
+
+\definecolor{codebg}{RGB}{248,248,248}
+\definecolor{codeframe}{RGB}{220,220,220}
+\definecolor{codecomment}{RGB}{92,99,112}
+\definecolor{codekeyword}{RGB}{0,92,175}
+\definecolor{codestring}{RGB}{163,21,21}
+\definecolor{chapterBlue}{HTML}{1F3C88}
+\definecolor{chapterTeal}{HTML}{2CA7A0}
+\definecolor{chapterSky}{HTML}{DFF3FF}
+\definecolor{sectionInk}{HTML}{243B53}
+\definecolor{accentOrange}{HTML}{F59E0B}
+
+\lstdefinestyle{bashstyle}{
+  language=bash,
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  rulecolor=\color{codeframe},
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  breaklines=true,
+  commentstyle=\color{codecomment},
+  keywordstyle=\color{codekeyword},
+  stringstyle=\color{codestring}
+}
+
+\lstdefinestyle{textstyle}{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  rulecolor=\color{codeframe},
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  breaklines=true
+}
+
+
+\newcommand{\ChapterBannerNumbered}[1]{%
+  \begin{tikzpicture}[remember picture,overlay]
+
+    \path[
+      shade,
+      left color=chapterBlue,
+      right color=chapterTeal,
+      rounded corners=14pt
+    ]
+    (0,-4.2) rectangle (\textwidth,4.4);
+
+    % CHAPTER label
+    \node[
+      anchor=west,
+      text=chapterSky,
+      font=\fontsize{12}{14}\selectfont\bfseries\sffamily
+    ]
+    at (1.0,2.7)
+    {};
+
+    % Huge chapter number
+    \node[
+      anchor=west,
+      text=white,
+      opacity=0.2,
+      font=\fontsize{180}{184}\selectfont\bfseries\sffamily
+    ]
+    at (0.5,0.5)
+    {\thechapter};
+
+    % Chapter title
+    % Shadow copy
+    \node[
+      anchor=west,
+      align=left,
+      text=black,
+      opacity=0.55,
+      font=\fontsize{26}{30}\selectfont\bfseries\sffamily,
+      text width=0.55\textwidth
+    ]
+    at (5.26,0.04)
+    {#1};
+
+    % Main title
+    \node[
+      anchor=west,
+      align=left,
+      text=chapterSky,
+      font=\fontsize{26}{30}\selectfont\bfseries\sffamily,
+      text width=0.55\textwidth
+    ]
+    at (5.2,0.1)
+    {#1};
+
+    % Bottom label
+    \path[
+      fill=chapterSky,
+      rounded corners=6pt
+    ]
+    (0.8,-3.55) rectangle (5.8,-2.9);
+
+    \node[
+      anchor=west,
+      text=chapterBlue,
+      font=\sffamily\bfseries\small
+    ]
+    at (1.0,-3.22)
+    {PALPATINE LAB GUIDE};
+
+  \end{tikzpicture}
+
+  \vspace{4.5cm}
+}
+
+\newcommand{\ChapterBannerNumberless}[1]{%
+  \begin{tikzpicture}[remember picture,overlay]
+    \path[shade,left color=chapterBlue,right color=chapterTeal,rounded corners=14pt]
+      (0,-0.2) rectangle (\textwidth,4.4);
+
+    \node[anchor=west,text=chapterSky,font=\fontsize{26}{30}\selectfont\bfseries]
+      at (0.8,3.0) {#1};
+
+    \path[fill=chapterSky,rounded corners=6pt]
+      (0.8,0.7) rectangle (5.8,1.35);
+
+    \node[anchor=west,text=chapterBlue,font=\sffamily\bfseries\small]
+      at (1.0,1.03) {PALPATINE LAB GUIDE};
+  \end{tikzpicture}
+  \vspace{4.5cm}
+}
+
+\newcommand{\SectionCard}[2]{%
+  \tikz[baseline=(textnode.base)]{
+    \node[
+      fill=chapterSky,
+      rounded corners=3pt,
+      inner xsep=6pt,
+      inner ysep=3pt
+    ] (textnode) {\strut #1\quad #2};
+  }%
+}
+
+\titleformat{\chapter}[display]
+  {\normalfont\bfseries\sffamily}
+  {}
+  {0pt}
+  {\ChapterBannerNumbered{#1}}
+
+\titleformat{name=\chapter,numberless}[display]
+  {\normalfont\bfseries\sffamily}
+  {}
+  {0pt}
+  {\ChapterBannerNumberless{#1}}
+
+\titleformat{\section}
+  {\Large\sffamily\bfseries\color{sectionInk}}
+  {}
+  {0pt}
+  {\SectionCard{\thesection}{#1}}
+
+\titlespacing*{\chapter}{0pt}{-10pt}{26pt}
+\titlespacing*{\section}{0pt}{16pt}{10pt}
+
+\makeatletter
+\renewcommand{\cleardoublepage}{%
+  \clearpage
+  \if@twoside
+    \ifodd\c@page
+    \else
+      \thispagestyle{empty}%
+      \vspace*{\fill}%
+      \begin{center}
+        {\small\itshape This page intentionally left blank.}
+      \end{center}
+      \vspace*{\fill}%
+      \newpage
+    \fi
+  \fi
+}
+\makeatother
+
+\tcbset{
+  modernnote/.style={
+    enhanced,
+    colback=chapterSky,
+    colframe=chapterTeal,
+    boxrule=0.8pt,
+    arc=3mm,
+    left=2mm,right=2mm,top=1.5mm,bottom=1.5mm,
+    fonttitle=\bfseries\sffamily,
+    coltitle=white,
+    colbacktitle=chapterBlue,
+    attach boxed title to top left={xshift=2mm,yshift=-2mm}
+  }
+}
+
+\title{Manual\\\large Documentation}
+\author{miniLaTeX workbench}
+\date{\today}
+
+\begin{document}
+
+\dominitoc
+\maketitle
+\tableofcontents
+
+\begin{tcolorbox}[modernnote,title=How to read this guide]
+This handbook uses visual cues inspired by modern networking textbooks: oversized chapter banners, highlighted section cards, and color-coded command blocks.
+Follow chapters in sequence for a clean setup, then jump to appendices for fast troubleshooting.
+\end{tcolorbox}
+
+\input{chapters/01-introduction}
+\input{chapters/02-network-virtualisation}
+\input{chapters/03-target-design}
+
+\end{document}
+
