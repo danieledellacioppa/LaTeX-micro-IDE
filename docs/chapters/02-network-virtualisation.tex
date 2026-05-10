@@ -1,4 +1,27 @@
-\chapter{Network and Virtualisation Notes}
+\chapter{Internal Architecture}
 \minitoc
 
-Second...
+\section{How it works internally}
+The application keeps UI and service logic modular.
+
+\begin{itemize}
+  \item \textbf{UI layer}: main window, editor, Git panel, terminal panel, log panel, and project explorer.
+  \item \textbf{Service layer}: file I/O, build execution, shell execution, and Git command orchestration.
+\end{itemize}
+
+\section{Build and preview workflow}
+The build flow is:
+\begin{enumerate}
+  \item User saves current file.
+  \item Build service runs \texttt{latexmk} in the file directory.
+  \item Stdout/stderr streams to the Build Log panel.
+  \item On success, the generated PDF is opened via desktop integration.
+  \item Build status is reflected in the status bar as \texttt{success} or \texttt{failed}.
+\end{enumerate}
+
+\section{Status bar contract}
+The status bar provides a compact operational summary:
+\begin{lstlisting}[style=textstyle]
+Project: /path/to/project | Branch: main | Git: dirty | Build: success
+\end{lstlisting}
+It updates when projects are opened, branch-related operations run, and build outcomes change.
