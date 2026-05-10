@@ -42,7 +42,7 @@ class GitService(QObject):
             [
                 "for-each-ref",
                 "--sort=-committerdate",
-                "--format=%(refname:short)|%(committerdate:iso8601)",
+                "--format=%(refname)|%(refname:short)|%(committerdate:iso8601)",
                 "refs/heads",
                 "refs/remotes",
             ],

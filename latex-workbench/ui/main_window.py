@@ -28,6 +28,8 @@ class MainWindow(QMainWindow):
         self.current_project_dir: Path | None = None
         self._active_build_file: Path | None = None
         self._last_build_status = "idle"
+        self._pending_local_delete_branch: str | None = None
+        self._pending_remote_prune = False
 
         self.editor = EditorPanel()
         self.log_panel = LogPanel()
