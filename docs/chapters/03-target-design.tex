@@ -8,12 +8,45 @@ This sprint improves day-to-day developer flow around branch awareness, push saf
 UI actions are separated into:
 \begin{itemize}
   \item \textbf{Top toolbar}: Open TeX, Save, Build.
-  \item \textbf{Git toolbar/panel}: Pull, Status, Refresh, Branch selector, Checkout, Auto Push.
+  \item \textbf{Git panel}: current branch label, branch table (name/type/date), and actions: Checkout, Pull, Status, Auto Push, Delete Local Branch, Delete Remote Branch, Ignore Pattern.
 \end{itemize}
 This avoids scattered actions and keeps Git tasks grouped.
 
 \section{Branch ordering by recent activity}
 Branch lists are intentionally \textbf{not alphabetical}. Branches are loaded with commit-time sorting so the most recently modified branches are shown first.
+
+\section{Git Ignore Manager}
+The panel now includes \textbf{Ignore Pattern}. This dialog supports patterns such as \texttt{*.pyc}, \texttt{\_\_pycache\_\_/}, \texttt{*.aux}, \texttt{*.log}, \texttt{*.fdb\_latexmk}, \texttt{*.fls}, and \texttt{*.xdv}.
+\begin{enumerate}
+  \item detect Git repository root with \texttt{git rev-parse --show-toplevel},
+  \item list tracked files via \texttt{git ls-files},
+  \item preview tracked files that match the entered pattern,
+  \item append pattern to root \texttt{.gitignore} without duplicates (create file if missing),
+  \item optionally run \texttt{git rm --cached -- <files...>} to remove matched tracked files from the Git index only.
+\end{enumerate}
+Important: this does not delete files from disk; it only stops tracking matching generated/cache files.
+
+\section{Branch management safety rules}
+\textbf{Local branch deletion}
+\begin{itemize}
+  \item safe delete uses \texttt{git branch -d <branch>},
+  \item deleting the currently checked out branch is blocked,
+  \item if safe delete fails (typically unmerged commits), the UI offers explicit force delete with \texttt{git branch -D <branch>} and a warning.
+\end{itemize}
+
+\textbf{Remote branch deletion}
+\begin{itemize}
+  \item remote delete uses \texttt{git push origin --delete <branch>},
+  \item protected branches are blocked by default: \texttt{origin/main}, \texttt{origin/master}, \texttt{origin/develop},
+  \item confirmation explicitly shows which remote branch will be deleted,
+  \item branch refs are refreshed with \texttt{git fetch --prune}.
+\end{itemize}
+
+\textbf{Local vs remote deletion}
+\begin{itemize}
+  \item deleting a local branch affects only your clone,
+  \item deleting a remote branch removes it from \texttt{origin} for collaborators.
+\end{itemize}
 
 \section{Graphical Auto Push}
 Auto Push reimplements the repository \texttt{autopush} behavior with a confirmation dialog:
