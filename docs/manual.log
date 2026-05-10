@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999998 (TeX Live 2026/Arch Linux) (preloaded format=xelatex 2026.5.6)  10 MAY 2026 13:55
+This is XeTeX, Version 3.141592653-2.6-0.999998 (TeX Live 2026/Arch Linux) (preloaded format=xelatex 2026.5.6)  10 MAY 2026 15:21
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -1048,21 +1048,43 @@ Package minitoc Info: I0033
 
 ]
 Chapter 1.
-Package minitoc Info: I0006
-(minitoc)             manual.mtc1 is empty on input line 3.
-) (./chapters/02-network-virtualisation.tex [5] [6
+\openout3 = `manual.mtc'.
 
-]
+\openout3 = `manual.mtc'.
+
+(./manual.mtc1) [5]) (./chapters/02-network-virtualisation.tex
+LaTeX Font Info:    Font shape `TU/TeXGyrePagella(0)/m/sl' in size <10.95> not 
+available
+(Font)              Font shape `TU/TeXGyrePagella(0)/m/it' tried instead on inp
+ut line 1.
+ [6]
 Chapter 2.
-Package minitoc Info: I0006
-(minitoc)             manual.mtc2 is empty on input line 3.
-) (./chapters/03-target-design.tex [7] [8
+\openout3 = `manual.mtc'.
+
+\openout3 = `manual.mtc'.
+
+(./manual.mtc2)) (./chapters/03-target-design.tex
+Overfull \hbox (1.54982pt too wide) in paragraph at lines 27--1
+\TU/TeXGyrePagella(0)/m/n/10.95 It updates when projects are opened, branch-rel
+ated operations run, and build outcomes change.
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 27--1
+
+ []
+
+[7
+
+] [8
 
 ]
 Chapter 3.
-Package minitoc Info: I0006
-(minitoc)             manual.mtc3 is empty on input line 3.
-)
+\openout3 = `manual.mtc'.
+
+\openout3 = `manual.mtc'.
+
+(./manual.mtc3) [9])
 Package minitoc Info: I0009
 (minitoc)             Listing minitoc auxiliary files. 
 (minitoc)             Creating the manual.maf file.
@@ -1074,21 +1096,21 @@ Package minitoc(hints) Warning: W0024
 (minitoc(hints))                Some hints have been written 
 (minitoc(hints))                in the manual.log file.
 
-[9] (./manual.aux)
+[10] (./manual.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-01-19>
  ***********
 Package rerunfilecheck Info: File `manual.out' has not changed.
-(rerunfilecheck)             Checksum: 1425F3F64AF783F1AB332C0F9FB5EBA1;492.
+(rerunfilecheck)             Checksum: CCAE4C3E1485495497110DD5439724CE;3068.
  ) 
 Here is how much of TeX's memory you used:
- 31594 strings out of 470191
- 675140 string characters out of 5479698
- 1159319 words of memory out of 5000000
- 59662 multiletter control sequences out of 15000+600000
- 631851 words of font info for 98 fonts, out of 8000000 for 9000
+ 31661 strings out of 470191
+ 676909 string characters out of 5479698
+ 1183370 words of memory out of 5000000
+ 59712 multiletter control sequences out of 15000+600000
+ 633525 words of font info for 114 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 102i,6n,107p,424b,1307s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 102i,9n,107p,424b,1307s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on manual.xdv (9 pages, 47884 bytes).
+Output written on manual.xdv (10 pages, 141992 bytes).
