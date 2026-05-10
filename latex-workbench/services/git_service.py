@@ -70,12 +70,8 @@ class GitService(QObject):
         self._run_git(["branch", flag, branch_name.strip()], action="delete_local_force" if force else "delete_local")
 
     def delete_remote_branch(self, remote_branch_name: str) -> None:
-        normalized = remote_branch_name.strip()
-        if "/" not in normalized:
-            self.output_received.emit(f"[git] Invalid remote branch name: {remote_branch_name}\n")
-            return
-        remote_name, short_name = normalized.split("/", 1)
-        self._run_git(["push", remote_name, "--delete", short_name], action="delete_remote")
+        short_name = remote_branch_name.replace("origin/", "", 1).strip()
+        self._run_git(["push", "origin", "--delete", short_name], action="delete_remote")
 
     def run_autopush(self, commit_message: str) -> None:
         msg = commit_message.strip()
@@ -125,7 +121,7 @@ class GitService(QObject):
             self._run_git(["push"], action="autopush_push")
             return
 
-        if action in {"autopush_push", "pull", "push", "checkout", "delete_local", "delete_local_force", "fetch_prune"} and exit_code == 0:
+        if action in {"autopush_push", "pull", "push", "checkout", "delete_local", "delete_local_force", "delete_remote", "fetch_prune"} and exit_code == 0:
             self.refresh_branches()
             self.refresh_repo_status()
 
@@ -145,12 +141,9 @@ class GitService(QObject):
             line = raw_line.strip()
             if not line or "->" in line or "|" not in line:
                 continue
-            parts = line.split("|", 2)
-            if len(parts) != 3:
-                continue
-            refname, short_name, date = parts
-            branch_name = short_name.strip()
-            branch_type = "remote" if refname.strip().startswith("refs/remotes/") else "local"
+            name, date = line.split("|", 1)
+            branch_name = name.strip()
+            branch_type = "remote" if branch_name.startswith("origin/") else "local"
             branches.append({"name": branch_name, "date": date.strip(), "type": branch_type})
         return branches
 

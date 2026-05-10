@@ -173,22 +173,15 @@ class MainWindow(QMainWindow):
 
     def _on_git_action_finished(self, _action: str, _exit_code: int) -> None:
         if _action == "delete_local" and _exit_code != 0:
-            failed_branch = self._pending_local_delete_branch
             force = QMessageBox.question(
                 self,
                 "Force delete branch?",
                 "Git refused safe delete (branch may be unmerged). Force delete with possible local commit loss?",
             )
-            if force == QMessageBox.Yes and failed_branch:
-                self.git_service.delete_local_branch(failed_branch, force=True)
-            self._pending_local_delete_branch = None
-        if _action == "delete_local" and _exit_code == 0:
-            self._pending_local_delete_branch = None
-        if _action == "delete_remote" and _exit_code == 0:
-            self._pending_remote_prune = True
-            self.git_service.fetch_prune()
-        elif _action == "fetch_prune" and _exit_code == 0:
-            self._pending_remote_prune = False
+            if force == QMessageBox.Yes:
+                selected = self.git_panel.selected_branch()
+                if selected:
+                    self.git_service.delete_local_branch(selected["name"], force=True)
         if self.current_project_dir is not None:
             self.project_explorer.set_root(self.current_project_dir)
 
@@ -199,7 +192,6 @@ class MainWindow(QMainWindow):
             return
         if QMessageBox.question(self, "Delete local branch", f"Delete local branch '{branch}' using safe mode?") != QMessageBox.Yes:
             return
-        self._pending_local_delete_branch = branch
         self.git_service.delete_local_branch(branch, force=False)
 
     def _delete_remote_branch(self, branch: str) -> None:
@@ -215,6 +207,7 @@ class MainWindow(QMainWindow):
         if confirm != QMessageBox.Yes:
             return
         self.git_service.delete_remote_branch(branch)
+        self.git_service.fetch_prune()
 
     def _handle_ignore_pattern(self) -> None:
         if self.current_project_dir is None:
