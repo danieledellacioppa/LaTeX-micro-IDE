@@ -1,4 +1,47 @@
-\chapter{Target Design}
+\chapter{Sprint Focus: Git and Navigation Workflow}
 \minitoc
 
-Third and so on...
+\section{Sprint objective}
+This sprint improves day-to-day developer flow around branch awareness, push safety, and project navigation.
+
+\section{Git workflow buttons and layout}
+UI actions are separated into:
+\begin{itemize}
+  \item \textbf{Top toolbar}: Open TeX, Save, Build.
+  \item \textbf{Git toolbar/panel}: Pull, Status, Refresh, Branch selector, Checkout, Auto Push.
+\end{itemize}
+This avoids scattered actions and keeps Git tasks grouped.
+
+\section{Branch ordering by recent activity}
+Branch lists are intentionally \textbf{not alphabetical}. Branches are loaded with commit-time sorting so the most recently modified branches are shown first.
+
+\section{Graphical Auto Push}
+Auto Push reimplements the repository \texttt{autopush} behavior with a confirmation dialog:
+\begin{enumerate}
+  \item detect changes with \texttt{git status --short --branch},
+  \item show changed files before commit,
+  \item require non-empty commit message,
+  \item run \texttt{git add -A}, one \texttt{git commit -m}, then \texttt{git push},
+  \item stream command output into the log panel.
+\end{enumerate}
+If there are no changes, Auto Push exits gracefully with an informational message.
+
+\section{Project explorer / solution explorer}
+A left sidebar presents the active project tree and opens \texttt{.tex} files on click. Build artefacts such as \texttt{.aux}, \texttt{.log}, \texttt{.fls}, \texttt{.toc}, \texttt{.out}, \texttt{.xdv}, and \texttt{.mtc*} are hidden by default.
+
+\section{Intentionally postponed}
+\begin{itemize}
+  \item embedded PDF preview pane,
+  \item PTY-grade terminal emulation,
+  \item embedded Neovim editing,
+  \item in-editor Copilot completions.
+\end{itemize}
+
+\section{Future Neovim and Copilot integration}
+Planned direction:
+\begin{enumerate}
+  \item replace or augment the plain text editor with embedded Neovim,
+  \item connect Copilot-compatible Neovim plugins,
+  \item keep build/Git/project explorer controls in PySide6,
+  \item preserve branch-aware status and Auto Push safety checks.
+\end{enumerate}

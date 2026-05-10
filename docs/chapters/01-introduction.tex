@@ -1,4 +1,26 @@
-\chapter{Introduction and Purpose}
+\chapter{LaTeX Workbench: Purpose and Scope}
 \minitoc
 
-Here goes the first chapter
+\section{What this software does}
+\texttt{latex-workbench} is a lightweight desktop IDE for writing and building LaTeX documents with a practical developer workflow. It combines an editor, build log, shell panel, Git workflow tools, and project navigation in one PySide6 window.
+
+\section{Why it exists}
+The project exists to provide a focused \emph{micro-IDE} for technical writing teams who need:
+\begin{itemize}
+  \item fast \texttt{.tex} editing,
+  \item reproducible builds with \texttt{latexmk} and XeLaTeX,
+  \item straightforward branch-aware Git actions,
+  \item minimal UI complexity compared to full-size IDEs.
+\end{itemize}
+
+\section{Current MVP implemented}
+The current MVP already supports:
+\begin{itemize}
+  \item opening and saving \texttt{.tex} files,
+  \item building with \texttt{latexmk -xelatex},
+  \item opening generated PDF files after successful build,
+  \item shell command execution in-project,
+  \item Git pull/status/checkout/auto-push actions,
+  \item branch list refresh and branch visibility in the status bar,
+  \item project explorer navigation for \texttt{.tex} files.
+\end{itemize}

@@ -8,6 +8,7 @@ from PySide6.QtCore import QObject, QProcess, Signal
 class GitService(QObject):
     output_received = Signal(str)
     branches_received = Signal(list)
+    repo_status_received = Signal(dict)
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -33,25 +34,42 @@ class GitService(QObject):
         self._run_git(["push"], action="push")
 
     def refresh_branches(self) -> None:
-        self._run_git(["branch", "--all"], action="branches")
+        self._run_git(
+            [
+                "for-each-ref",
+                "--sort=-committerdate",
+                "--format=%(refname:short)|%(committerdate:iso8601)",
+                "refs/heads",
+                "refs/remotes",
+            ],
+            action="branches",
+        )
+
+    def refresh_repo_status(self) -> None:
+        self._run_git(["status", "--porcelain", "--branch"], action="repo_status")
 
     def checkout_branch(self, branch_name: str) -> None:
         normalized = branch_name.strip()
 
-        if normalized.startswith("remotes/"):
-            normalized = normalized.replace("remotes/", "", 1)
-
-        if "/" in normalized and not normalized.startswith("HEAD"):
-            remote_name, local_branch = normalized.split("/", 1)
-            self._run_git(
-                ["checkout", "-B", local_branch, "--track", f"{remote_name}/{local_branch}"],
-                action="checkout",
+        if normalized.startswith("origin/"):
+            local_branch = normalized.replace("origin/", "", 1)
+            self.output_received.emit(
+                f"[git] Remote branch '{normalized}' selected. Creating local tracking branch '{local_branch}'.\n"
             )
+            self._run_git(["checkout", "-B", local_branch, "--track", normalized], action="checkout")
             return
 
         self._run_git(["checkout", normalized], action="checkout")
 
-    def _run_git(self, args: list[str], action: str) -> None:
+    def run_autopush(self, commit_message: str) -> None:
+        msg = commit_message.strip()
+        if not msg:
+            self.output_received.emit("[git] Commit message cannot be empty.\n")
+            return
+
+        self._run_git(["add", "-A"], action="autopush_add", chain=["commit", msg])
+
+    def _run_git(self, args: list[str], action: str, chain: list[str] | None = None) -> None:
         if self._project_dir is None:
             self.output_received.emit("[git] Open a .tex file first to set project directory.\n")
             return
@@ -60,7 +78,7 @@ class GitService(QObject):
             return
 
         self._stdout_buffer = ""
-        self._pending_action = action
+        self._pending_action = action if not chain else f"{action}:{'|'.join(chain)}"
         self._process.setWorkingDirectory(str(self._project_dir))
         self.output_received.emit(f"\n[git] git {' '.join(args)}\n[git] cwd: {self._project_dir}\n")
         self._process.start("git", args)
@@ -77,29 +95,51 @@ class GitService(QObject):
             self.output_received.emit(data)
 
     def _on_finished(self, exit_code: int, _status: QProcess.ExitStatus) -> None:
-        action = self._pending_action
+        action = self._pending_action or ""
 
-        if action == "checkout" and exit_code == 0:
+        if action.startswith("autopush_add:") and exit_code == 0:
+            _, tail = action.split(":", 1)
+            _, msg = tail.split("|", 1)
             self._pending_action = None
-            self.refresh_branches()
+            self._run_git(["commit", "-m", msg], action="autopush_commit")
             return
 
+        if action == "autopush_commit" and exit_code == 0:
+            self._pending_action = None
+            self._run_git(["push"], action="autopush_push")
+            return
+
+        if action in {"autopush_push", "pull", "push", "checkout"} and exit_code == 0:
+            self.refresh_branches()
+            self.refresh_repo_status()
+
         if action == "branches" and exit_code == 0:
-            branches = self._parse_branches(self._stdout_buffer)
-            self.branches_received.emit(branches)
+            self.branches_received.emit(self._parse_branches(self._stdout_buffer))
+
+        if action == "repo_status" and exit_code == 0:
+            self.repo_status_received.emit(self._parse_repo_status(self._stdout_buffer))
 
         self._pending_action = None
 
     @staticmethod
-    def _parse_branches(branch_output: str) -> list[str]:
-        branches: list[str] = []
+    def _parse_branches(branch_output: str) -> list[dict]:
+        branches: list[dict] = []
         for raw_line in branch_output.splitlines():
             line = raw_line.strip()
-            if not line:
+            if not line or "->" in line or "|" not in line:
                 continue
-            if "->" in line:
-                continue
-            line = line.lstrip("* ").strip()
-            if line not in branches:
-                branches.append(line)
+            name, date = line.split("|", 1)
+            branches.append({"name": name.strip(), "date": date.strip()})
         return branches
+
+    @staticmethod
+    def _parse_repo_status(status_output: str) -> dict:
+        branch = "unknown"
+        dirty = False
+        for idx, line in enumerate(status_output.splitlines()):
+            if idx == 0 and line.startswith("##"):
+                branch = line.replace("##", "").strip().split("...", 1)[0]
+                continue
+            if line.strip():
+                dirty = True
+        return {"branch": branch, "dirty": dirty}

@@ -3,17 +3,8 @@
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QUrl
-from PySide6.QtGui import QAction
-from PySide6.QtWidgets import (
-    QFileDialog,
-    QMainWindow,
-    QMessageBox,
-    QSplitter,
-    QTabWidget,
-    QWidget,
-    QVBoxLayout,
-)
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtGui import QAction, QDesktopServices
+from PySide6.QtWidgets import QFileDialog, QMainWindow, QMessageBox, QSplitter, QTabWidget, QWidget, QVBoxLayout
 
 from services.build_service import BuildService
 from services.file_service import FileService
@@ -22,6 +13,7 @@ from services.shell_service import ShellService
 from ui.editor_panel import EditorPanel
 from ui.git_panel import GitPanel
 from ui.log_panel import LogPanel
+from ui.project_explorer import ProjectExplorer
 from ui.terminal_panel import TerminalPanel
 
 
@@ -29,10 +21,12 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("latex-workbench")
-        self.resize(1200, 800)
+        self.resize(1280, 840)
 
         self.current_file: Path | None = None
+        self.current_project_dir: Path | None = None
         self._active_build_file: Path | None = None
+        self._last_build_status = "idle"
 
         self.editor = EditorPanel()
         self.log_panel = LogPanel()
@@ -42,38 +36,50 @@ class MainWindow(QMainWindow):
 
         self._setup_ui()
         self._setup_toolbar()
+        self._setup_git_toolbar()
         self._connect_signals()
+        self._update_status_bar("unknown", False)
 
     def _setup_ui(self) -> None:
         self.terminal_panel = TerminalPanel()
         self.git_panel = GitPanel()
+        self.project_explorer = ProjectExplorer()
 
         bottom_tabs = QTabWidget()
         bottom_tabs.addTab(self.log_panel, "Build Log")
         bottom_tabs.addTab(self.terminal_panel, "Shell")
         bottom_tabs.addTab(self.git_panel, "Git")
 
-        splitter = QSplitter()
-        splitter.setOrientation(Qt.Orientation.Vertical)
-        splitter.addWidget(self.editor)
-        splitter.addWidget(bottom_tabs)
-        splitter.setSizes([550, 250])
+        vertical_split = QSplitter(Qt.Orientation.Vertical)
+        vertical_split.addWidget(self.editor)
+        vertical_split.addWidget(bottom_tabs)
+        vertical_split.setSizes([560, 250])
+
+        horizontal_split = QSplitter(Qt.Orientation.Horizontal)
+        horizontal_split.addWidget(self.project_explorer)
+        horizontal_split.addWidget(vertical_split)
+        horizontal_split.setSizes([300, 960])
 
         container = QWidget()
         layout = QVBoxLayout(container)
-        layout.addWidget(splitter)
+        layout.addWidget(horizontal_split)
         self.setCentralWidget(container)
 
     def _setup_toolbar(self) -> None:
         toolbar = self.addToolBar("Main")
-
-        self.open_action = QAction("Open .tex", self)
+        self.open_action = QAction("Open TeX", self)
         self.save_action = QAction("Save", self)
         self.build_action = QAction("Build", self)
 
         toolbar.addAction(self.open_action)
         toolbar.addAction(self.save_action)
         toolbar.addAction(self.build_action)
+
+    def _setup_git_toolbar(self) -> None:
+        git_toolbar = self.addToolBar("Git")
+        git_toolbar.addAction(QAction("Pull", self, triggered=self.git_service.run_pull))
+        git_toolbar.addAction(QAction("Status", self, triggered=self.git_service.run_status))
+        git_toolbar.addAction(QAction("Refresh Branches", self, triggered=self.git_service.refresh_branches))
 
     def _connect_signals(self) -> None:
         self.open_action.triggered.connect(self.open_file)
@@ -88,24 +94,23 @@ class MainWindow(QMainWindow):
 
         self.git_panel.pull_requested.connect(self.git_service.run_pull)
         self.git_panel.status_requested.connect(self.git_service.run_status)
-        self.git_panel.push_requested.connect(self.git_service.run_push)
         self.git_panel.refresh_branches_requested.connect(self.git_service.refresh_branches)
         self.git_panel.checkout_requested.connect(self.git_service.checkout_branch)
+        self.git_panel.auto_push_button.clicked.connect(self._handle_auto_push)
+
         self.git_service.output_received.connect(self.git_panel.append_text)
         self.git_service.output_received.connect(self.log_panel.append_text)
         self.git_service.branches_received.connect(self.git_panel.set_branches)
+        self.git_service.repo_status_received.connect(self._on_repo_status)
+
+        self.project_explorer.tex_file_requested.connect(self.open_file_path)
 
     def open_file(self) -> None:
-        file_name, _ = QFileDialog.getOpenFileName(
-            self,
-            "Open LaTeX file",
-            "",
-            "TeX files (*.tex);;All files (*)",
-        )
-        if not file_name:
-            return
+        file_name, _ = QFileDialog.getOpenFileName(self, "Open LaTeX file", "", "TeX files (*.tex);;All files (*)")
+        if file_name:
+            self.open_file_path(Path(file_name))
 
-        path = Path(file_name)
+    def open_file_path(self, path: Path) -> None:
         try:
             content = FileService.read_text(path)
         except Exception as exc:
@@ -117,23 +122,62 @@ class MainWindow(QMainWindow):
         self._set_project_directory(path.parent)
         self.statusBar().showMessage(f"Opened {path}", 5000)
 
-
     def _set_project_directory(self, project_dir: Path) -> None:
+        self.current_project_dir = project_dir
         self.shell_service.set_project_dir(project_dir)
         self.git_service.set_project_dir(project_dir)
+        self.project_explorer.set_root(project_dir)
         self.git_service.refresh_branches()
+        self.git_service.refresh_repo_status()
+
+    def _handle_auto_push(self) -> None:
+        if self.current_project_dir is None:
+            QMessageBox.information(self, "Open project", "Open a .tex file first.")
+            return
+        changes = self.git_service._parse_repo_status(self._capture_git_status_short())
+        status_lines = [line for line in self._capture_git_status_short().splitlines() if line and not line.startswith("##")]
+        if not status_lines:
+            QMessageBox.information(self, "Auto Push", "No changes detected. Nothing to push.")
+            return
+        message = self.git_panel.ask_autopush_confirmation(status_lines)
+        if message:
+            self.git_service.run_autopush(message)
+
+    def _capture_git_status_short(self) -> str:
+        import subprocess
+
+        try:
+            result = subprocess.run(
+                ["git", "status", "--short", "--branch"],
+                cwd=str(self.current_project_dir),
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            return result.stdout
+        except Exception as exc:
+            self.log_panel.append_text(f"[git] Could not inspect status: {exc}\n")
+            return ""
+
+    def _on_repo_status(self, status: dict) -> None:
+        self._update_status_bar(status.get("branch", "unknown"), bool(status.get("dirty", False)))
+
+    def _update_status_bar(self, branch: str, dirty: bool) -> None:
+        project = str(self.current_project_dir) if self.current_project_dir else "(none)"
+        git_state = "dirty" if dirty else "clean"
+        self.statusBar().showMessage(
+            f"Project: {project} | Branch: {branch} | Git: {git_state} | Build: {self._last_build_status}"
+        )
 
     def save_file(self) -> bool:
         if self.current_file is None:
             QMessageBox.warning(self, "No file selected", "Open a .tex file before saving.")
             return False
-
         try:
             FileService.write_text(self.current_file, self.editor.toPlainText())
         except Exception as exc:
             QMessageBox.critical(self, "Save failed", f"Could not save file:\n{exc}")
             return False
-
         self.statusBar().showMessage(f"Saved {self.current_file}", 5000)
         return True
 
@@ -141,32 +185,23 @@ class MainWindow(QMainWindow):
         if self.current_file is None:
             QMessageBox.warning(self, "No file selected", "Open a .tex file before building.")
             return
-
         if not self.save_file():
             return
-
-        if self.build_service.is_running():
-            self.build_service.build(self.current_file)
-            return
-
         self._active_build_file = self.current_file
         self.build_service.build(self.current_file)
 
     def _on_build_finished(self, success: bool, message: str) -> None:
+        self._last_build_status = "success" if success else "failed"
         self.log_panel.append_text(f"\n=== {message} ===\n")
         build_file = self._active_build_file
         self._active_build_file = None
+        self.git_service.refresh_repo_status()
 
         if not success or build_file is None:
             return
-
         pdf_path = build_file.with_suffix(".pdf")
         if not pdf_path.exists():
             self.log_panel.append_text(f"Expected PDF not found: {pdf_path}\n")
             return
-
         opened = QDesktopServices.openUrl(QUrl.fromLocalFile(str(pdf_path)))
-        if opened:
-            self.log_panel.append_text(f"Opened PDF: {pdf_path}\n")
-        else:
-            self.log_panel.append_text(f"Could not open PDF: {pdf_path}\n")
+        self.log_panel.append_text((f"Opened PDF: {pdf_path}\n") if opened else (f"Could not open PDF: {pdf_path}\n"))
