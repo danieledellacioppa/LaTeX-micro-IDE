@@ -20,6 +20,7 @@ class GitService(QObject):
         self._process.finished.connect(self._on_finished)
         self._pending_action: str | None = None
         self._stdout_buffer: str = ""
+        self._refresh_status_after_branches = False
 
     def set_project_dir(self, project_dir: Path) -> None:
         self._project_dir = project_dir
@@ -119,7 +120,8 @@ class GitService(QObject):
         if action == "repo_status" and exit_code == 0:
             self.repo_status_received.emit(self._parse_repo_status(self._stdout_buffer))
 
-        self._pending_action = None
+        if action == "repo_status" and exit_code == 0:
+            self.repo_status_received.emit(self._parse_repo_status(self._stdout_buffer))
 
     @staticmethod
     def _parse_branches(branch_output: str) -> list[dict]:
