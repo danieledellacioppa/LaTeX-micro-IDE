@@ -110,19 +110,15 @@ class GitService(QObject):
             self._run_git(["push"], action="autopush_push")
             return
 
-        self._pending_action = None
-        should_refresh_branches = action in {"autopush_push", "pull", "push", "checkout"} and exit_code == 0
-        if should_refresh_branches:
-            self._refresh_status_after_branches = True
+        if action in {"autopush_push", "pull", "push", "checkout"} and exit_code == 0:
             self.refresh_branches()
-            return
+            self.refresh_repo_status()
 
         if action == "branches" and exit_code == 0:
             self.branches_received.emit(self._parse_branches(self._stdout_buffer))
-            if self._refresh_status_after_branches:
-                self._refresh_status_after_branches = False
-                self.refresh_repo_status()
-                return
+
+        if action == "repo_status" and exit_code == 0:
+            self.repo_status_received.emit(self._parse_repo_status(self._stdout_buffer))
 
         if action == "repo_status" and exit_code == 0:
             self.repo_status_received.emit(self._parse_repo_status(self._stdout_buffer))
@@ -135,10 +131,7 @@ class GitService(QObject):
             if not line or "->" in line or "|" not in line:
                 continue
             name, date = line.split("|", 1)
-            normalized_name = name.strip()
-            if normalized_name in {"origin", "upstream"}:
-                continue
-            branches.append({"name": normalized_name, "date": date.strip()})
+            branches.append({"name": name.strip(), "date": date.strip()})
         return branches
 
     @staticmethod

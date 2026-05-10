@@ -187,9 +187,6 @@ class MainWindow(QMainWindow):
             return
         if not self.save_file():
             return
-        if self.build_service.is_running():
-            self.log_panel.append_text("Build already running. Please wait for completion before starting another file.\n")
-            return
         self._active_build_file = self.current_file
         self.build_service.build(self.current_file)
 
