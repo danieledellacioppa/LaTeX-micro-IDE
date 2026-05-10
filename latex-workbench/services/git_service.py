@@ -41,7 +41,7 @@ class GitService(QObject):
                 "--sort=-committerdate",
                 "--format=%(refname:short)|%(committerdate:iso8601)",
                 "refs/heads",
-                "refs/remotes/*",
+                "refs/remotes",
             ],
             action="branches",
         )
@@ -136,7 +136,7 @@ class GitService(QObject):
                 continue
             name, date = line.split("|", 1)
             normalized_name = name.strip()
-            if "/" not in normalized_name:
+            if normalized_name in {"origin", "upstream"}:
                 continue
             branches.append({"name": normalized_name, "date": date.strip()})
         return branches
